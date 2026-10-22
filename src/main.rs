@@ -52,8 +52,7 @@ fn parse(path: &Path) -> Result<Vec<Entry>, String> {
                 line,
             });
         } else {
-            return Err(format!("line {}: can't pars
-                e {:?}", line, ln));
+            return Err(format!("line {}: can't parse {:?}", line, ln));
         }
     }
 
