@@ -61,7 +61,7 @@ fn parse(path: &Path) -> Result<Vec<Entry>, String> {
 }
 
 fn main() {
-    match parse(Path::new("alt/example.tess")) {
+    match parse(Path::new("file/example.tess")) {
         Ok(entries) => {
             for e in &entries {
                 println!("{:?}", e);
