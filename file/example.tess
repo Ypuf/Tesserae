@@ -1,0 +1,21 @@
+// base
+host = "localhost"
+port = :5432
+proc = "http"
+timeout = 30sec
+url = "{proc}://{host}:{port}/api"
+
+:: db
+host = "localhost"
+port = :5433
+
+@prod
+  host = "ypuf.xyz"
+  port = :25565
+  proc = "https"
+  db/port = :25566
+  db/host = "db.ypuf.xyz"
+
+@
+// return to base
+colour = #FF6611
