@@ -7,7 +7,7 @@ use std::path::Path;
 struct Entry {
     tess: Option<String>,
     key: String,
-    raw: String,
+    value: Value,
     line: usize,
 }
 
@@ -176,7 +176,7 @@ fn parse(path: &Path) -> Result<Vec<Entry>, String> {
             entries.push(Entry {
                 tess: tess.clone(),
                 key: parts.join("/"),
-                raw: raw.trim().to_string(),
+                value: parse_value(raw.trim(), line)?,
                 line,
             });
         } else {
@@ -191,10 +191,7 @@ fn main() {
     match parse(Path::new("file/example.tess")) {
         Ok(entries) => {
             for e in &entries {
-                match parse_value(&e.raw, e.line) {
-                    Ok(v) => println!("{:?} {} = {:?}", e.tess, e.key, v),
-                    Err(msg) => eprintln!("{}", msg),
-                }
+                println!("{:?} {} = {:?}", e.tess, e.key, e.value);
             }
         }
         Err(msg) => eprintln!("{}", msg),

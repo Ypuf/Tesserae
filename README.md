@@ -25,6 +25,7 @@ load it with no env and `url` is the root value, in this case `http://localhost:
 
 - strings: `"text"`
 - int: `42`
+- float: `67.6`
 - ports: `:8080`
 - durations: `30sec`
 - sizes: `4GiB`
