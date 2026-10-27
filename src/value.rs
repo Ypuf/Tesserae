@@ -1,5 +1,4 @@
-#[allow(dead_code)] // temp, until overlays/refs read these
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Int(i64),
     Float(f64),
@@ -11,8 +10,7 @@ pub enum Value {
     Ref(String),
 }
 
-#[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Part {
     Text(String),
     Ref(String),
