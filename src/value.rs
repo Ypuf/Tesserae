@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
 pub enum Value {
+    Bool(bool),
     Int(i64),
     Float(f64),
     Str(Vec<Part>),
@@ -98,6 +99,12 @@ pub fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
             Some(inner) => parse_string(inner, line),
             None => Err(format!("line {}: unterminated string: {}", line, raw)),
         };
+    }
+
+    match raw {
+        "true" => return Ok(Value::Bool(true)),
+        "false" => return Ok(Value::Bool(false)),
+        _ => {}
     }
 
     if let Ok(n) = raw.parse::<i64>() {
