@@ -2,12 +2,29 @@ use crate::Entry;
 use crate::Value;
 use std::collections::HashMap;
 use std::mem::discriminant;
+use strsim::damerau_levenshtein;
 
 pub fn apply(
     entries: Vec<Entry>,
     env: Option<&str>,
 ) -> Result<HashMap<String, (Value, usize)>, String> {
     let mut map = HashMap::new();
+
+    if let Some(env) = env
+        && !entries.iter().any(|e| e.tess.as_deref() == Some(env))
+    {
+        let suggestion = entries
+            .iter()
+            .filter_map(|e| e.tess.as_deref())
+            .map(|t| (damerau_levenshtein(env, t), t))
+            .filter(|(d, _)| *d <= 2)
+            .min_by_key(|(d, _)| *d);
+
+        return Err(match suggestion {
+            Some((_, t)) => format!("no tessera matching '{}'. Did you mean '{}'?", env, t),
+            None => format!("no tessera matching '{}'.", env),
+        });
+    }
 
     for e in entries.iter().filter(|e| e.tess.is_none()) {
         if let Some((_, prev)) = map.get(&e.key) {
