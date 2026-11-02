@@ -18,6 +18,28 @@ pub struct Parsed {
     pub tesserae: HashSet<String>,
 }
 
+fn strip_comment(ln: &str) -> &str {
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for (i, c) in ln.char_indices() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == '"' {
+                in_string = false;
+            }
+        } else if c == '"' {
+            in_string = true;
+        } else if ln[i..].starts_with("//") && (i == 0 || ln[..i].ends_with(char::is_whitespace)) {
+            return &ln[..i];
+        }
+    }
+    ln
+}
+
 pub fn parse(path: &Path) -> Result<Parsed, String> {
     let contents =
         fs::read_to_string(path).map_err(|e| format!("couldn't read {}: {}", path.display(), e))?;
@@ -29,9 +51,9 @@ pub fn parse(path: &Path) -> Result<Parsed, String> {
 
     for (index, ln) in contents.lines().enumerate() {
         let line = index + 1;
-        let ln = ln.trim();
+        let ln = strip_comment(ln).trim();
 
-        if ln.is_empty() || ln.starts_with("//") {
+        if ln.is_empty() {
             continue;
         }
 

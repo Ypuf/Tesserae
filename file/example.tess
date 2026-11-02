@@ -3,19 +3,19 @@ host = "localhost"
 port = :5432
 proc = "http"
 timeout = 30sec
-url = "{proc}://{host}:{port}/api"
+url = "{proc}://{host}:{port}/api" // use references at any point in the config for things that may change between environments
 
 :: db
 host = "localhost"
 port = :5433
 
-@prod
-  host = "ypuf.xyz"
-  port = :25565
-  proc = "https"
-  db/port = :25566
-  db/host = "db.ypuf.xyz"
+@prod // enter the prod environment
+  host = "ypuf.xyz" // set the host to be ypuf.xyz instead of localhost
+  port = :25565 // set the port to 25565 instead of 5432
+  proc = "https" // set the protocol to https instead of http
+  db/port = :25566 // set the database's port to 25566 instead of 5433
+  db/host = "db.ypuf.xyz" // set the database's host to db.ypuf.xyz instead of localhost
 
 @
 // return to base
-colour = #FF6611
+colour = #FF6611 // this colour will always be #FF6611 regardless of environment.

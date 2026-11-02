@@ -1,13 +1,14 @@
 use std::env;
 use std::path::Path;
-use tesserae::{apply, parse, resolve};
+use tesserae::load;
 
 fn main() {
-    let env_name = env::args().nth(1);
+    let mut args = env::args();
+    let path_arg = args.nth(1).expect("usage: <path> [env]");
+    let fuckyou: Option<String> = args.next();
+    let env_name: Option<&str> = fuckyou.as_deref();
 
-    let result = parse(Path::new("file/example.tess"))
-        .and_then(|parsed| apply(parsed, env_name.as_deref()))
-        .and_then(resolve);
+    let result = load(Path::new(&path_arg), env_name);
 
     match result {
         Ok(map) => {
@@ -18,6 +19,9 @@ fn main() {
                 println!("{} = {:?}  (line {})", k, value, line);
             }
         }
-        Err(msg) => eprintln!("{}", msg),
+        Err(msg) => {
+            eprintln!("{}", msg);
+            std::process::exit(1);
+        }
     }
 }
