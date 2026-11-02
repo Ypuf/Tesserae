@@ -56,6 +56,14 @@ its because of the essential idea of i want to make my config be 1 file rather t
 // i should finish explaining this, and better
 
 
-
+---
 
 at the very least, i know i'll use this.
+
+---
+
+must run:
+
+```
+cargo fmt && cargo clippy
+```
