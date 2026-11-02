@@ -5,10 +5,9 @@ use tesserae::load;
 fn main() {
     let mut args = env::args();
     let path_arg = args.nth(1).expect("usage: <path> [env]");
-    let fuckyou: Option<String> = args.next();
-    let env_name: Option<&str> = fuckyou.as_deref();
+    let env_name: Option<String> = args.next();
 
-    let result = load(Path::new(&path_arg), env_name);
+    let result = load(Path::new(&path_arg), env_name.as_deref());
 
     match result {
         Ok(map) => {
