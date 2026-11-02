@@ -40,6 +40,16 @@ fn strip_comment(ln: &str) -> &str {
     ln
 }
 
+fn valid_name(s: &str) -> bool {
+    !s.is_empty()
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
+fn valid_path(s: &str) -> bool {
+    s.split('/').all(valid_name)
+}
+
 pub fn parse(path: &Path) -> Result<Parsed, String> {
     let contents =
         fs::read_to_string(path).map_err(|e| format!("couldn't read {}: {}", path.display(), e))?;
@@ -62,6 +72,9 @@ pub fn parse(path: &Path) -> Result<Parsed, String> {
             tess = if name.is_empty() {
                 None
             } else {
+                if !valid_name(name) {
+                    return Err(format!("line {}: tessera name is invalid: '{}'", line, ln));
+                }
                 tesserae.insert(name.to_string());
                 Some(name.to_string())
             };
@@ -71,11 +84,17 @@ pub fn parse(path: &Path) -> Result<Parsed, String> {
             scope = if rest.is_empty() {
                 Vec::new()
             } else {
+                if !valid_path(rest) {
+                    return Err(format!("line {}: path name is invalid: '{}'", line, ln));
+                }
                 rest.split('/').map(String::from).collect()
             };
         } else if let Some((key, raw)) = ln.split_once('=') {
             if key.trim().is_empty() {
                 return Err(format!("line {}: key can't be empty: '{}'", line, ln));
+            }
+            if !valid_path(key.trim()) {
+                return Err(format!("line {}: key name is invalid: '{}'", line, ln));
             }
             let mut parts = scope.clone();
             parts.extend(key.trim().split('/').map(String::from));
