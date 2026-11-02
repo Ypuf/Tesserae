@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -11,13 +12,20 @@ pub struct Entry {
     pub line: usize,
 }
 
-pub fn parse(path: &Path) -> Result<Vec<Entry>, String> {
+#[derive(Debug)]
+pub struct Parsed {
+    pub entries: Vec<Entry>,
+    pub tesserae: HashSet<String>,
+}
+
+pub fn parse(path: &Path) -> Result<Parsed, String> {
     let contents =
         fs::read_to_string(path).map_err(|e| format!("couldn't read {}: {}", path.display(), e))?;
 
     let mut tess: Option<String> = None;
     let mut scope: Vec<String> = Vec::new();
     let mut entries = Vec::new();
+    let mut tesserae: HashSet<String> = HashSet::new();
 
     for (index, ln) in contents.lines().enumerate() {
         let line = index + 1;
@@ -32,6 +40,7 @@ pub fn parse(path: &Path) -> Result<Vec<Entry>, String> {
             tess = if name.is_empty() {
                 None
             } else {
+                tesserae.insert(name.to_string());
                 Some(name.to_string())
             };
             scope.clear();
@@ -59,5 +68,5 @@ pub fn parse(path: &Path) -> Result<Vec<Entry>, String> {
         }
     }
 
-    Ok(entries)
+    Ok(Parsed { entries, tesserae })
 }

@@ -5,8 +5,8 @@ use tesserae::{apply, parse};
 fn main() {
     let env_name = env::args().nth(1);
 
-    let result = parse(Path::new("file/example.tess"))
-        .and_then(|entries| apply(entries, env_name.as_deref()));
+    let result =
+        parse(Path::new("file/example.tess")).and_then(|parsed| apply(parsed, env_name.as_deref()));
 
     match result {
         Ok(map) => {
