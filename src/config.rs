@@ -106,8 +106,7 @@ impl Config {
                     _ => unreachable!("parser only produces known units"),
                 };
                 let rounded = bits.round();
-                if (bits - rounded).abs() > bits * 4.0 * f64::EPSILON
-                    || rounded >= u64::MAX as f64
+                if (bits - rounded).abs() > bits * 4.0 * f64::EPSILON || rounded >= u64::MAX as f64
                 {
                     return Err(format!(
                         "line {}: '{}' isn't a whole number of bits that fits in u64",

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::Path;
 
 mod config;
@@ -12,19 +13,44 @@ pub use resolve::resolve;
 pub use tessera::apply;
 pub use value::{Part, Value};
 
+type Map = HashMap<String, (Value, usize)>;
+
 pub fn load(path: &Path, env: Option<&str>) -> Result<Config, String> {
     let parsed = parse(path)?;
     let base = resolve(apply(parsed.clone(), None)?)?;
-    let full = resolve(apply(parsed, env)?)?;
+
+    let requested = match env {
+        Some(name) => overlay(&parsed, name, &base)?,
+        None => base.clone(),
+    };
+
+    let mut others: Vec<&str> = parsed
+        .tesserae
+        .iter()
+        .map(String::as_str)
+        .filter(|name| Some(*name) != env)
+        .collect();
+    others.sort();
+
+    for name in others {
+        overlay(&parsed, name, &base)?;
+    }
+
+    Ok(Config::new(requested))
+}
+
+fn overlay(parsed: &Parsed, name: &str, base: &Map) -> Result<Map, String> {
+    let full = resolve(apply(parsed.clone(), Some(name))?).map_err(|e| format!("@{name}: {e}"))?;
 
     for (key, (value, line)) in &full {
         let (base_value, base_line) = &base[key];
         if std::mem::discriminant(base_value) != std::mem::discriminant(value) {
             return Err(format!(
-                "line {}: '{}' resolved into a different type than its base '{}'",
-                line, key, base_line
+                "line {}: @{} resolves '{}' to a different type than base (line {})",
+                line, name, key, base_line
             ));
         }
     }
-    Ok(Config::new(full))
+
+    Ok(full)
 }
