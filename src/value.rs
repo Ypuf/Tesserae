@@ -18,7 +18,9 @@ pub enum Part {
 }
 
 const DUR: &[&str] = &["sec", "min", "hr", "wk", "mo", "yr", "d"];
-const SIZE: &[&str] = &["KiB", "MiB", "GiB", "TiB", "kB", "MB", "GB", "TB", "b", "B"];
+const SIZE: &[&str] = &[
+    "KiB", "MiB", "GiB", "TiB", "kB", "KB", "MB", "GB", "TB", "B",
+];
 
 fn split_unit(raw: &str, units: &[&str]) -> Option<(f64, String)> {
     units.iter().find_map(|unit| {

@@ -65,5 +65,5 @@ at the very least, i know i'll use this.
 must run:
 
 ```
-cargo fmt && cargo clippy
+cargo fmt && cargo clippy && cargo test --workspace
 ```

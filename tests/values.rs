@@ -118,7 +118,7 @@ fn invalid_colours_are_rejected() {
 fn unknown_values_are_rejected() {
     for raw in [
         "", "abc", "True", "yes", "'single'", "1_000", "1.2.3", "5 sec", "5xyz", "-5sec", "-4GiB",
-        "1.2.3sec", "sec", ".sec", "GiB", "4gib",
+        "1.2.3sec", "sec", ".sec", "GiB", "4gib", "8b",
     ] {
         assert_eq!(
             value_err(raw),

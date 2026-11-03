@@ -44,11 +44,10 @@ fn oversized_duration_errors_on_access_not_load() {
 fn sizes_are_returned_in_bytes() {
     const KI: u64 = 1024;
     for (raw, bytes) in [
-        ("0b", 0),
-        ("8b", 1),
         ("0B", 0),
         ("1B", 1),
         ("1kB", 1000),
+        ("1KB", 1000),
         ("1MB", 1_000_000),
         ("1GB", 1_000_000_000),
         ("1TB", 1_000_000_000_000),
@@ -66,7 +65,7 @@ fn sizes_are_returned_in_bytes() {
 
 #[test]
 fn fractional_bytes_are_rejected() {
-    for raw in ["1b", "1.5b", "0.5B", "0.1B"] {
+    for raw in ["0.5B", "0.1B"] {
         assert_eq!(
             ok(&format!("k = {raw}")).size("k"),
             Err("line 1: 'k' isn't a whole number of bytes that fits in u64".to_string()),
