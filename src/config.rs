@@ -92,24 +92,24 @@ impl Config {
     pub fn size(&self, key: &str) -> Result<u64, String> {
         match self.get(key)? {
             (Value::Size(n, unit), line) => {
-                let bits = n * match unit.as_str() {
-                    "b" => 1.0,
-                    "B" => 8.0,
-                    "kB" => 8e3,
-                    "MB" => 8e6,
-                    "GB" => 8e9,
-                    "TB" => 8e12,
-                    "KiB" => 8.0 * 1024.0,
-                    "MiB" => 8.0 * 1024f64.powi(2),
-                    "GiB" => 8.0 * 1024f64.powi(3),
-                    "TiB" => 8.0 * 1024f64.powi(4),
+                let bytes = n * match unit.as_str() {
+                    "B" => 1.0,
+                    "kB" | "KB" => 1e3,
+                    "MB" => 1e6,
+                    "GB" => 1e9,
+                    "TB" => 1e12,
+                    "KiB" => 1024.0,
+                    "MiB" => 1024f64.powi(2),
+                    "GiB" => 1024f64.powi(3),
+                    "TiB" => 1024f64.powi(4),
                     _ => unreachable!("parser only produces known units"),
                 };
-                let rounded = bits.round();
-                if (bits - rounded).abs() > bits * 4.0 * f64::EPSILON || rounded >= u64::MAX as f64
+                let rounded = bytes.round();
+                if (bytes - rounded).abs() > bytes * 4.0 * f64::EPSILON
+                    || rounded >= u64::MAX as f64
                 {
                     return Err(format!(
-                        "line {}: '{}' isn't a whole number of bits that fits in u64",
+                        "line {}: '{}' isn't a whole number of bytes that fits in u64",
                         line, key
                     ));
                 }
