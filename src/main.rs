@@ -10,7 +10,8 @@ fn main() {
     let result = load(Path::new(&path_arg), env_name.as_deref());
 
     match result {
-        Ok(map) => {
+        Ok(config) => {
+            let map = config.raw();
             let mut keys: Vec<_> = map.keys().collect();
             keys.sort();
             for k in keys {

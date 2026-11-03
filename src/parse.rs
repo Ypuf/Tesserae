@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::value::parse_value;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Entry {
     pub tess: Option<String>,
     pub key: String,
@@ -12,7 +12,7 @@ pub struct Entry {
     pub line: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Parsed {
     pub entries: Vec<Entry>,
     pub tesserae: HashSet<String>,
