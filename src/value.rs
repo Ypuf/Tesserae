@@ -84,8 +84,8 @@ fn parse_string(inner: &str, line: usize) -> Result<Value, String> {
 pub fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
     if let Some(num) = raw.strip_prefix(':') {
         return match num.parse::<u16>() {
-            Ok(port) => Ok(Value::Port(port)),
-            Err(_) => Err(format!("line {}: invalid port: '{}'", line, num)),
+            Ok(port) if !num.starts_with('+') => Ok(Value::Port(port)),
+            _ => Err(format!("line {}: invalid port: '{}'", line, num)),
         };
     }
 
@@ -109,6 +109,10 @@ pub fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
         _ => {}
     }
 
+    if raw.starts_with('+') {
+        return Err(format!("line {}: unknown value: '{}'", line, raw));
+    }
+
     if let Ok(n) = raw.parse::<i64>() {
         return Ok(Value::Int(n));
     }
@@ -116,6 +120,9 @@ pub fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
     if raw.contains('.')
         && let Ok(f) = raw.parse::<f64>()
     {
+        if f.is_infinite() {
+            return Err(format!("line {}: float is out of range: '{}'", line, raw));
+        }
         return Ok(Value::Float(f));
     }
 

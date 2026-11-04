@@ -38,8 +38,31 @@ fn floats() {
         ("-1.5", -1.5),
         ("0.0", 0.0),
         ("1.5e3", 1500.0),
+        ("1.5e+3", 1500.0),
     ] {
         assert_eq!(value(raw).float("k"), Ok(want), "{raw}");
+    }
+}
+
+#[test]
+fn infinite_floats_are_rejected() {
+    let long = format!("1{}.0", "0".repeat(400));
+    for raw in ["1.0e999", "-1.0e999", long.as_str()] {
+        assert_eq!(
+            value_err(raw),
+            format!("line 1: float is out of range: '{raw}'")
+        );
+    }
+}
+
+#[test]
+fn leading_plus_signs_are_rejected() {
+    for raw in ["+5", "+0", "+1.5", "+1.0e999", "+5sec", "+4GiB", "+"] {
+        assert_eq!(
+            value_err(raw),
+            format!("line 1: unknown value: '{raw}'"),
+            "{raw}"
+        );
     }
 }
 
@@ -88,7 +111,7 @@ fn ports() {
 
 #[test]
 fn invalid_ports_are_rejected() {
-    for num in ["", "abc", "-1", "65536", "80.5"] {
+    for num in ["", "abc", "-1", "+80", "65536", "80.5"] {
         assert_eq!(
             value_err(&format!(":{num}")),
             format!("line 1: invalid port: '{num}'")
