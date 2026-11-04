@@ -4,7 +4,10 @@ use std::collections::HashMap;
 use std::mem::discriminant;
 use strsim::damerau_levenshtein;
 
-pub fn apply(parsed: Parsed, env: Option<&str>) -> Result<HashMap<String, (Value, usize)>, String> {
+pub(crate) fn apply(
+    parsed: Parsed,
+    env: Option<&str>,
+) -> Result<HashMap<String, (Value, usize)>, String> {
     let Parsed { entries, tesserae } = parsed;
     let mut map = HashMap::new();
 

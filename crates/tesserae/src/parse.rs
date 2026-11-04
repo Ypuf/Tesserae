@@ -5,17 +5,17 @@ use std::path::Path;
 use crate::value::parse_value;
 
 #[derive(Debug, Clone)]
-pub struct Entry {
-    pub tess: Option<String>,
-    pub key: String,
-    pub value: crate::value::Value,
-    pub line: usize,
+pub(crate) struct Entry {
+    pub(crate) tess: Option<String>,
+    pub(crate) key: String,
+    pub(crate) value: crate::value::Value,
+    pub(crate) line: usize,
 }
 
 #[derive(Debug, Clone)]
-pub struct Parsed {
-    pub entries: Vec<Entry>,
-    pub tesserae: HashSet<String>,
+pub(crate) struct Parsed {
+    pub(crate) entries: Vec<Entry>,
+    pub(crate) tesserae: HashSet<String>,
 }
 
 fn strip_comment(ln: &str) -> &str {
@@ -50,7 +50,7 @@ fn valid_path(s: &str) -> bool {
     s.split('/').all(valid_name)
 }
 
-pub fn parse(path: &Path) -> Result<Parsed, String> {
+pub(crate) fn parse(path: &Path) -> Result<Parsed, String> {
     let contents =
         fs::read_to_string(path).map_err(|e| format!("couldn't read {}: {}", path.display(), e))?;
 

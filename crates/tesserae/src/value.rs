@@ -160,7 +160,7 @@ fn parse_list(raw: &str, line: usize) -> Result<Value, String> {
     Ok(Value::List(items))
 }
 
-pub fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
+pub(crate) fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
     if raw.starts_with('[') {
         return parse_list(raw, line);
     }

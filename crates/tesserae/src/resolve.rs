@@ -4,7 +4,7 @@ use std::mem::discriminant;
 
 type Map = HashMap<String, (Value, usize)>;
 
-pub fn resolve(map: Map) -> Result<Map, String> {
+pub(crate) fn resolve(map: Map) -> Result<Map, String> {
     let mut keys: Vec<&String> = map.keys().collect();
     keys.sort();
 

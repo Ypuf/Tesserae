@@ -8,10 +8,9 @@ mod tessera;
 mod value;
 
 pub use config::Config;
-use parse::parse_str;
-pub use parse::{Entry, Parsed, parse};
-pub use resolve::resolve;
-pub use tessera::apply;
+use parse::{Parsed, parse, parse_str};
+use resolve::resolve;
+use tessera::apply;
 pub use value::{Part, Value};
 
 type Map = HashMap<String, (Value, usize)>;
