@@ -1,7 +1,3 @@
-[package]
-name = "tesserae"
-version = "0.1.1"
-edition = "2024"
-
-[dependencies]
-strsim = "0.11.1"
+[workspace]
+resolver = "3"
+members = ["crates/*"]
