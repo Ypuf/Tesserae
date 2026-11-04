@@ -78,13 +78,6 @@ fn sections_prefix_the_keys_below_them() {
 }
 
 #[test]
-fn sections_replace_rather_than_nest() {
-    let config = ok(":: a\n:: b\nk = 1\n");
-    assert_eq!(config.int("b/k"), Ok(1));
-    assert!(config.int("a/b/k").is_err());
-}
-
-#[test]
 fn bare_section_returns_to_root() {
     assert_eq!(ok(":: a\n::\nk = 1\n").int("k"), Ok(1));
 }

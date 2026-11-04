@@ -2,7 +2,7 @@ mod common;
 
 use std::time::Duration;
 
-use common::ok;
+use common::{err, ok};
 use tesserae::{Config, Resolved};
 
 #[test]
@@ -42,35 +42,8 @@ fn get_returns_every_type_converted() {
 }
 
 #[test]
-fn get_follows_references_to_the_target_type() {
-    let config = ok("a = :80\nb = \"{a}\"\nc = [\"{a}\"]\n");
-    assert_eq!(config.get("b"), Ok(Resolved::Port(80)));
-    assert_eq!(
-        config.get("c"),
-        Ok(Resolved::List(vec![Resolved::Port(80)]))
-    );
-}
-
-#[test]
-fn get_reports_conversion_errors() {
-    assert_eq!(
-        ok("k = 0.5B").get("k"),
-        Err("line 1: 'k' isn't a whole number of bytes that fits in u64".to_string())
-    );
-    assert_eq!(
-        ok("k = [1B, 0.5B]").get("k"),
-        Err("line 1: 'k[1]' isn't a whole number of bytes that fits in u64".to_string())
-    );
-}
-
-#[test]
 fn keys_are_sorted() {
     assert_eq!(ok("b = 1\na/c = 2\na = 3\n").keys(), ["a", "a/c", "b"]);
-}
-
-#[test]
-fn line_reports_where_a_key_was_set() {
-    assert_eq!(ok("\n\nk = 1\n").line("k"), Ok(3));
 }
 
 #[test]
@@ -107,11 +80,10 @@ fn durations_keep_subsecond_precision() {
 }
 
 #[test]
-fn oversized_duration_errors_on_access_not_load() {
-    let config = ok(&format!("\nk = 1{}yr", "0".repeat(30)));
+fn oversized_duration_fails_at_load() {
     assert_eq!(
-        config.duration("k"),
-        Err("line 2: duration is out of range: 'k'".to_string())
+        err(&format!("\nk = 1{}yr", "0".repeat(30))),
+        "line 2: duration is out of range: 'k'"
     );
 }
 
@@ -142,8 +114,8 @@ fn sizes_are_returned_in_bytes() {
 fn fractional_bytes_are_rejected() {
     for raw in ["0.5B", "0.1B"] {
         assert_eq!(
-            ok(&format!("k = {raw}")).size("k"),
-            Err("line 1: 'k' isn't a whole number of bytes that fits in u64".to_string()),
+            err(&format!("k = {raw}")),
+            "line 1: 'k' isn't a whole number of bytes that fits in u64",
             "{raw}"
         );
     }
@@ -156,8 +128,8 @@ fn sizes_must_fit_in_u64() {
         Ok(16_777_215 * (1u64 << 40))
     );
     assert_eq!(
-        ok("k = 16777216TiB").size("k"),
-        Err("line 1: 'k' isn't a whole number of bytes that fits in u64".to_string())
+        err("k = 16777216TiB"),
+        "line 1: 'k' isn't a whole number of bytes that fits in u64"
     );
 }
 

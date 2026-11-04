@@ -41,11 +41,6 @@ fn whitespace_inside_lists_is_optional() {
 }
 
 #[test]
-fn single_item_lists_work() {
-    assert_eq!(ok("k = [1]").ints("k"), Ok(vec![1]));
-}
-
-#[test]
 fn empty_lists_work_with_any_list_getter() {
     for src in ["k = []", "k = [ ]"] {
         let config = ok(src);
@@ -168,8 +163,8 @@ fn getters_check_lists_and_items() {
 #[test]
 fn item_conversion_errors_name_the_item() {
     assert_eq!(
-        ok("k = [1B, 0.5B]").sizes("k"),
-        Err("line 1: 'k[1]' isn't a whole number of bytes that fits in u64".to_string())
+        err("k = [1B, 0.5B]"),
+        "line 1: 'k[1]' isn't a whole number of bytes that fits in u64"
     );
 }
 

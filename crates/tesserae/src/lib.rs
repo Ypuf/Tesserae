@@ -7,6 +7,7 @@ mod resolve;
 mod tessera;
 mod value;
 
+use config::check;
 pub use config::{Config, Resolved};
 use parse::{Parsed, parse, parse_str};
 use resolve::resolve;
@@ -25,6 +26,7 @@ pub fn load_str(src: &str, env: Option<&str>) -> Result<Config, String> {
 
 fn build(parsed: Parsed, env: Option<&str>) -> Result<Config, String> {
     let base = resolve(apply(parsed.clone(), None)?)?;
+    check(&base)?;
 
     let requested = match env {
         Some(name) => overlay(&parsed, name, &base)?,
@@ -58,6 +60,8 @@ fn overlay(parsed: &Parsed, name: &str, base: &Map) -> Result<Map, String> {
             ));
         }
     }
+
+    check(&full).map_err(|e| format!("@{name}: {e}"))?;
 
     Ok(full)
 }

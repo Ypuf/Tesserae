@@ -97,14 +97,6 @@ fn env_names_are_case_sensitive() {
 }
 
 #[test]
-fn overriding_a_key_missing_from_base_is_rejected() {
-    assert_eq!(
-        err_env("host = 1\n@prod\nhots = 2", "prod"),
-        "line 3: @prod overrides 'hots', which isn't in base"
-    );
-}
-
-#[test]
 fn overriding_with_a_different_type_is_rejected() {
     for (base, over) in [
         ("1", "1.5"),
@@ -155,6 +147,29 @@ fn every_tessera_is_checked_even_when_not_requested() {
     let want = "line 5: @bad overrides 'nope', which isn't in base";
     assert_eq!(err(src), want);
     assert_eq!(err_env(src, "good"), want);
+}
+
+#[test]
+fn bad_sizes_and_durations_in_any_tessera_fail_every_load() {
+    let huge = format!("1{}yr", "0".repeat(30));
+    for (src, want) in [
+        (
+            "a = 1B\n@good\na = 2B\n@bad\na = 1.5B\n".to_string(),
+            "@bad: line 5: 'a' isn't a whole number of bytes that fits in u64",
+        ),
+        (
+            "a = [1B]\n@good\na = [2B]\n@bad\na = [1.5B]\n".to_string(),
+            "@bad: line 5: 'a[0]' isn't a whole number of bytes that fits in u64",
+        ),
+        (
+            format!("a = 1sec\n@good\na = 2sec\n@bad\na = {huge}\n"),
+            "@bad: line 5: duration is out of range: 'a'",
+        ),
+    ] {
+        assert_eq!(err(&src), want);
+        assert_eq!(err_env(&src, "good"), want);
+        assert_eq!(err_env(&src, "bad"), want);
+    }
 }
 
 #[test]

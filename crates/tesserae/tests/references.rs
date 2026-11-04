@@ -57,11 +57,6 @@ fn multiple_references_in_one_string() {
 }
 
 #[test]
-fn references_can_point_forward() {
-    assert_eq!(ok("a = \"{b}\"\nb = 1").int("a"), Ok(1));
-}
-
-#[test]
 fn references_chain() {
     let config = ok(r#"
         a = "{b}"

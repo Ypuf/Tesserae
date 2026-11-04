@@ -21,6 +21,18 @@ pub enum Resolved {
 
 type Read<'a, T> = fn(&str, &'a Value, usize) -> Result<T, String>;
 
+pub(crate) fn check(map: &HashMap<String, (Value, usize)>) -> Result<(), String> {
+    let mut keys: Vec<&String> = map.keys().collect();
+    keys.sort();
+
+    for key in keys {
+        let (value, line) = &map[key];
+        read_resolved(key, value, *line)?;
+    }
+
+    Ok(())
+}
+
 impl Config {
     pub(crate) fn new(map: HashMap<String, (Value, usize)>) -> Self {
         Config { map }
