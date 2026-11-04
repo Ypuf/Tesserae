@@ -54,6 +54,10 @@ pub fn parse(path: &Path) -> Result<Parsed, String> {
     let contents =
         fs::read_to_string(path).map_err(|e| format!("couldn't read {}: {}", path.display(), e))?;
 
+    parse_str(&contents)
+}
+
+pub(crate) fn parse_str(contents: &str) -> Result<Parsed, String> {
     let mut tess: Option<String> = None;
     let mut scope: Vec<String> = Vec::new();
     let mut entries = Vec::new();

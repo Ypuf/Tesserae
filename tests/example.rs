@@ -1,7 +1,8 @@
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Duration;
 
-use tesserae::{Config, load};
+use tesserae::{Config, load, load_str};
 
 fn example(env: Option<&str>) -> Config {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("file/example.tess");
@@ -32,4 +33,19 @@ fn prod() {
     assert_eq!(config.str("db/host"), Ok("db.ypuf.xyz"));
     assert_eq!(config.port("db/port"), Ok(25566));
     assert_eq!(config.colour("colour").as_deref(), Ok("#FF6611"));
+}
+
+fn dump(config: &Config) -> String {
+    format!("{:?}", config.raw().iter().collect::<BTreeMap<_, _>>())
+}
+
+#[test]
+fn load_str_matches_load() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("file/example.tess");
+    let src = std::fs::read_to_string(&path).unwrap();
+
+    for env in [None, Some("prod")] {
+        let from_str = load_str(&src, env).unwrap();
+        assert_eq!(dump(&from_str), dump(&example(env)), "{env:?}");
+    }
 }

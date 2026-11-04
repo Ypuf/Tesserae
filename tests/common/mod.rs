@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use tesserae::{Config, load};
+use tesserae::{Config, load_str};
 
 static NEXT: AtomicUsize = AtomicUsize::new(0);
 
@@ -29,10 +29,6 @@ impl Drop for TempFile {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.0);
     }
-}
-
-pub fn load_str(src: &str, env: Option<&str>) -> Result<Config, String> {
-    load(TempFile::new(src).path(), env)
 }
 
 pub fn ok(src: &str) -> Config {

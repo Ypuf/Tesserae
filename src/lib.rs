@@ -8,6 +8,7 @@ mod tessera;
 mod value;
 
 pub use config::Config;
+use parse::parse_str;
 pub use parse::{Entry, Parsed, parse};
 pub use resolve::resolve;
 pub use tessera::apply;
@@ -16,7 +17,14 @@ pub use value::{Part, Value};
 type Map = HashMap<String, (Value, usize)>;
 
 pub fn load(path: &Path, env: Option<&str>) -> Result<Config, String> {
-    let parsed = parse(path)?;
+    build(parse(path)?, env)
+}
+
+pub fn load_str(src: &str, env: Option<&str>) -> Result<Config, String> {
+    build(parse_str(src)?, env)
+}
+
+fn build(parsed: Parsed, env: Option<&str>) -> Result<Config, String> {
     let base = resolve(apply(parsed.clone(), None)?)?;
 
     let requested = match env {
