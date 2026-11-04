@@ -6,29 +6,53 @@ pub struct Config {
     map: HashMap<String, (Value, usize)>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Resolved {
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    Str(String),
+    Port(u16),
+    Duration(Duration),
+    Size(u64),
+    Colour(String),
+    List(Vec<Resolved>),
+}
+
 type Read<'a, T> = fn(&str, &'a Value, usize) -> Result<T, String>;
 
 impl Config {
     pub(crate) fn new(map: HashMap<String, (Value, usize)>) -> Self {
         Config { map }
     }
-    pub fn raw(&self) -> &HashMap<String, (Value, usize)> {
-        &self.map
+
+    pub fn keys(&self) -> Vec<&str> {
+        let mut keys: Vec<&str> = self.map.keys().map(String::as_str).collect();
+        keys.sort();
+        keys
     }
 
-    fn get(&self, key: &str) -> Result<&(Value, usize), String> {
+    pub fn get(&self, key: &str) -> Result<Resolved, String> {
+        self.one(key, read_resolved)
+    }
+
+    pub fn line(&self, key: &str) -> Result<usize, String> {
+        self.entry(key).map(|(_, line)| *line)
+    }
+
+    fn entry(&self, key: &str) -> Result<&(Value, usize), String> {
         self.map
             .get(key)
             .ok_or_else(|| format!("no key '{}' in config", key))
     }
 
     fn one<'a, T>(&'a self, key: &str, read: Read<'a, T>) -> Result<T, String> {
-        let (value, line) = self.get(key)?;
+        let (value, line) = self.entry(key)?;
         read(key, value, *line)
     }
 
     fn many<'a, T>(&'a self, key: &str, read: Read<'a, T>) -> Result<Vec<T>, String> {
-        match self.get(key)? {
+        match self.entry(key)? {
             (Value::List(items), line) => items
                 .iter()
                 .enumerate()
@@ -105,6 +129,27 @@ impl Config {
 
 fn wrong(key: &str, line: usize, want: &str, got: &Value) -> String {
     format!("line {}: '{}' is {}, not {}", line, key, got.kind(), want)
+}
+
+fn read_resolved(key: &str, value: &Value, line: usize) -> Result<Resolved, String> {
+    Ok(match value {
+        Value::Bool(b) => Resolved::Bool(*b),
+        Value::Int(n) => Resolved::Int(*n),
+        Value::Float(f) => Resolved::Float(*f),
+        Value::Str(_) => Resolved::Str(read_str(key, value, line)?.to_string()),
+        Value::Port(p) => Resolved::Port(*p),
+        Value::Duration(..) => Resolved::Duration(read_duration(key, value, line)?),
+        Value::Size(..) => Resolved::Size(read_size(key, value, line)?),
+        Value::Colour(_) => Resolved::Colour(read_colour(key, value, line)?),
+        Value::List(items) => Resolved::List(
+            items
+                .iter()
+                .enumerate()
+                .map(|(i, item)| read_resolved(&format!("{}[{}]", key, i), item, line))
+                .collect::<Result<_, _>>()?,
+        ),
+        Value::Ref(_) => unreachable!("resolved values have no refs"),
+    })
 }
 
 fn read_str<'a>(key: &str, value: &'a Value, line: usize) -> Result<&'a str, String> {

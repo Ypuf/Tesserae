@@ -3,7 +3,82 @@ mod common;
 use std::time::Duration;
 
 use common::ok;
-use tesserae::Config;
+use tesserae::{Config, Resolved};
+
+#[test]
+fn get_returns_every_type_converted() {
+    let config = ok(r#"
+        bool = true
+        int = 1
+        float = 1.5
+        str = "s"
+        built = "{str}!"
+        port = :80
+        dur = 1.5min
+        size = 1KiB
+        colour = #ff6611
+        list = [:80, :81]
+        empty = []
+    "#);
+
+    for (key, want) in [
+        ("bool", Resolved::Bool(true)),
+        ("int", Resolved::Int(1)),
+        ("float", Resolved::Float(1.5)),
+        ("str", Resolved::Str("s".to_string())),
+        ("built", Resolved::Str("s!".to_string())),
+        ("port", Resolved::Port(80)),
+        ("dur", Resolved::Duration(Duration::from_secs(90))),
+        ("size", Resolved::Size(1024)),
+        ("colour", Resolved::Colour("#FF6611".to_string())),
+        (
+            "list",
+            Resolved::List(vec![Resolved::Port(80), Resolved::Port(81)]),
+        ),
+        ("empty", Resolved::List(Vec::new())),
+    ] {
+        assert_eq!(config.get(key), Ok(want), "{key}");
+    }
+}
+
+#[test]
+fn get_follows_references_to_the_target_type() {
+    let config = ok("a = :80\nb = \"{a}\"\nc = [\"{a}\"]\n");
+    assert_eq!(config.get("b"), Ok(Resolved::Port(80)));
+    assert_eq!(
+        config.get("c"),
+        Ok(Resolved::List(vec![Resolved::Port(80)]))
+    );
+}
+
+#[test]
+fn get_reports_conversion_errors() {
+    assert_eq!(
+        ok("k = 0.5B").get("k"),
+        Err("line 1: 'k' isn't a whole number of bytes that fits in u64".to_string())
+    );
+    assert_eq!(
+        ok("k = [1B, 0.5B]").get("k"),
+        Err("line 1: 'k[1]' isn't a whole number of bytes that fits in u64".to_string())
+    );
+}
+
+#[test]
+fn keys_are_sorted() {
+    assert_eq!(ok("b = 1\na/c = 2\na = 3\n").keys(), ["a", "a/c", "b"]);
+}
+
+#[test]
+fn line_reports_where_a_key_was_set() {
+    assert_eq!(ok("\n\nk = 1\n").line("k"), Ok(3));
+}
+
+#[test]
+fn get_and_line_reject_missing_keys() {
+    let missing = "no key 'b' in config".to_string();
+    assert_eq!(ok("a = 1").get("b"), Err(missing.clone()));
+    assert_eq!(ok("a = 1").line("b"), Err(missing));
+}
 
 #[test]
 fn durations_convert_every_unit() {

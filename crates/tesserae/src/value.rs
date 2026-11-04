@@ -1,7 +1,7 @@
 use std::mem::discriminant;
 
 #[derive(Debug, Clone)]
-pub enum Value {
+pub(crate) enum Value {
     Bool(bool),
     Int(i64),
     Float(f64),
@@ -41,7 +41,7 @@ impl Value {
 }
 
 #[derive(Debug, Clone)]
-pub enum Part {
+pub(crate) enum Part {
     Text(String),
     Ref(String),
 }

@@ -7,11 +7,11 @@ mod resolve;
 mod tessera;
 mod value;
 
-pub use config::Config;
+pub use config::{Config, Resolved};
 use parse::{Parsed, parse, parse_str};
 use resolve::resolve;
 use tessera::apply;
-pub use value::{Part, Value};
+use value::{Part, Value};
 
 type Map = HashMap<String, (Value, usize)>;
 

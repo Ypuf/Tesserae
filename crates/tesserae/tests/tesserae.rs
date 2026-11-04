@@ -27,8 +27,8 @@ fn env_applies_only_its_own_overrides() {
 fn overridden_keys_report_the_override_line() {
     let src = "a = 1\nb = 2\n@e\na = 3\n";
     let config = ok_env(src, "e");
-    assert_eq!(config.raw()["a"].1, 4);
-    assert_eq!(config.raw()["b"].1, 2);
+    assert_eq!(config.line("a"), Ok(4));
+    assert_eq!(config.line("b"), Ok(2));
 }
 
 #[test]

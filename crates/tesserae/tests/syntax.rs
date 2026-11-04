@@ -7,7 +7,7 @@ use common::{err, ok};
 #[test]
 fn empty_and_comment_only_files_have_no_keys() {
     for src in ["", "\n\n", "// nothing\n   // here\n"] {
-        assert!(ok(src).raw().is_empty(), "{src:?}");
+        assert!(ok(src).keys().is_empty(), "{src:?}");
     }
 }
 

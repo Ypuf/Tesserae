@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Duration;
 
@@ -36,7 +35,12 @@ fn prod() {
 }
 
 fn dump(config: &Config) -> String {
-    format!("{:?}", config.raw().iter().collect::<BTreeMap<_, _>>())
+    let entries: Vec<_> = config
+        .keys()
+        .into_iter()
+        .map(|k| (k, config.get(k), config.line(k)))
+        .collect();
+    format!("{entries:?}")
 }
 
 #[test]
