@@ -4,7 +4,7 @@ typechecked config file format i'm making for funsies. overlays or the *tesserae
 
 ## example
 
-in file/example.tess
+in crates/tesserae/file/example.tess
 
 the idea is: 
 
