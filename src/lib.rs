@@ -44,7 +44,7 @@ fn overlay(parsed: &Parsed, name: &str, base: &Map) -> Result<Map, String> {
 
     for (key, (value, line)) in &full {
         let (base_value, base_line) = &base[key];
-        if std::mem::discriminant(base_value) != std::mem::discriminant(value) {
+        if !base_value.same_type(value) {
             return Err(format!(
                 "line {}: @{} resolves '{}' to a different type than base (line {})",
                 line, name, key, base_line

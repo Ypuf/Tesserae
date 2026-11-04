@@ -1,3 +1,5 @@
+use std::mem::discriminant;
+
 #[derive(Debug, Clone)]
 pub enum Value {
     Bool(bool),
@@ -9,6 +11,33 @@ pub enum Value {
     Size(f64, String),
     Colour(String),
     Ref(String),
+    List(Vec<Value>),
+}
+
+impl Value {
+    pub(crate) fn kind(&self) -> &'static str {
+        match self {
+            Value::Bool(_) => "a bool",
+            Value::Int(_) => "an int",
+            Value::Float(_) => "a float",
+            Value::Str(_) | Value::Ref(_) => "a string",
+            Value::Port(_) => "a port",
+            Value::Duration(..) => "a duration",
+            Value::Size(..) => "a size",
+            Value::Colour(_) => "a colour",
+            Value::List(_) => "a list",
+        }
+    }
+
+    pub(crate) fn same_type(&self, other: &Value) -> bool {
+        match (self, other) {
+            (Value::List(a), Value::List(b)) => match (a.first(), b.first()) {
+                (Some(x), Some(y)) => discriminant(x) == discriminant(y),
+                _ => true,
+            },
+            _ => discriminant(self) == discriminant(other),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -81,7 +110,61 @@ fn parse_string(inner: &str, line: usize) -> Result<Value, String> {
     Ok(Value::Str(parts))
 }
 
+fn split_items(inner: &str) -> Vec<&str> {
+    let mut items = Vec::new();
+    let mut start = 0;
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for (i, c) in inner.char_indices() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == '"' {
+                in_string = false;
+            }
+        } else if c == '"' {
+            in_string = true;
+        } else if c == ',' {
+            items.push(inner[start..i].trim());
+            start = i + 1;
+        }
+    }
+
+    items.push(inner[start..].trim());
+    items
+}
+
+fn parse_list(raw: &str, line: usize) -> Result<Value, String> {
+    let Some(inner) = raw.strip_prefix('[').and_then(|r| r.strip_suffix(']')) else {
+        return Err(format!("line {}: unterminated list: {}", line, raw));
+    };
+
+    if inner.trim().is_empty() {
+        return Ok(Value::List(Vec::new()));
+    }
+
+    let mut items = Vec::new();
+    for item in split_items(inner) {
+        if item.is_empty() {
+            return Err(format!("line {}: empty item in list: {}", line, raw));
+        }
+        if item.starts_with('[') {
+            return Err(format!("line {}: lists can't be nested: {}", line, raw));
+        }
+        items.push(parse_value(item, line)?);
+    }
+
+    Ok(Value::List(items))
+}
+
 pub fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
+    if raw.starts_with('[') {
+        return parse_list(raw, line);
+    }
+
     if let Some(num) = raw.strip_prefix(':') {
         return match num.parse::<u16>() {
             Ok(port) if !num.starts_with('+') => Ok(Value::Port(port)),
