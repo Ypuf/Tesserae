@@ -5,6 +5,7 @@ description = "a small typed config format"
 readme = "../../README.md"
 license.workspace = true
 edition.workspace = true
+repository.workspace = true
 
 [dependencies]
 strsim = "0.11.1"
