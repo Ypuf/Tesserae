@@ -3,5 +3,5 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-license = "GPL-3.0-only"
+license = "Apache-2.0"
 edition = "2024"
