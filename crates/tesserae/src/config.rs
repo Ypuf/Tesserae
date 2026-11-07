@@ -10,6 +10,7 @@ pub struct Config {
     path: Option<PathBuf>,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Resolved {
     Bool(bool),
