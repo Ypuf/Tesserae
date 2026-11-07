@@ -19,8 +19,8 @@ fn whole_string_reference_keeps_the_target_type() {
     assert_eq!(config.duration("c"), Ok(std::time::Duration::from_secs(30)));
     assert_eq!(config.str("d"), Ok("text"));
     assert_eq!(
-        config.str("a"),
-        Err("line 6: 'a' is a port, not a string".to_string())
+        config.str("a").unwrap_err().to_string(),
+        "line 6: 'a' is a port, not a string"
     );
 }
 

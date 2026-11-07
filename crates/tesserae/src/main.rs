@@ -1,8 +1,10 @@
 use std::env;
+use std::error::Error as _;
 use std::path::Path;
-use tesserae::{Config, load};
+use std::process;
+use tesserae::{Config, Error, load};
 
-fn render(config: &Config) -> Result<String, String> {
+fn render(config: &Config) -> Result<String, Error> {
     config
         .keys()
         .into_iter()
@@ -15,16 +17,25 @@ fn render(config: &Config) -> Result<String, String> {
 
 fn main() {
     let mut args = env::args();
-    let path_arg = args.nth(1).expect("usage: <path> [env]");
+    let Some(path_arg) = args.nth(1) else {
+        eprintln!("usage: <path> [env]");
+        process::exit(2);
+    };
     let env_name: Option<String> = args.next();
 
     let result = load(Path::new(&path_arg), env_name.as_deref()).and_then(|c| render(&c));
 
     match result {
         Ok(output) => print!("{}", output),
-        Err(msg) => {
-            eprintln!("{}", msg);
-            std::process::exit(1);
+        Err(e) => {
+            eprint!("{}", e);
+            let mut source = e.source();
+            while let Some(cause) = source {
+                eprint!(": {}", cause);
+                source = cause.source();
+            }
+            eprintln!();
+            process::exit(1);
         }
     }
 }

@@ -1,4 +1,37 @@
+use std::fmt;
 use std::mem::discriminant;
+
+use crate::error::{Error, ErrorKind};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ValueKind {
+    Bool,
+    Int,
+    Float,
+    Str,
+    Port,
+    Duration,
+    Size,
+    Colour,
+    List,
+}
+
+impl fmt::Display for ValueKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            ValueKind::Bool => "a bool",
+            ValueKind::Int => "an int",
+            ValueKind::Float => "a float",
+            ValueKind::Str => "a string",
+            ValueKind::Port => "a port",
+            ValueKind::Duration => "a duration",
+            ValueKind::Size => "a size",
+            ValueKind::Colour => "a colour",
+            ValueKind::List => "a list",
+        })
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) enum Value {
@@ -15,17 +48,17 @@ pub(crate) enum Value {
 }
 
 impl Value {
-    pub(crate) fn kind(&self) -> &'static str {
+    pub(crate) fn kind(&self) -> ValueKind {
         match self {
-            Value::Bool(_) => "a bool",
-            Value::Int(_) => "an int",
-            Value::Float(_) => "a float",
-            Value::Str(_) | Value::Ref(_) => "a string",
-            Value::Port(_) => "a port",
-            Value::Duration(..) => "a duration",
-            Value::Size(..) => "a size",
-            Value::Colour(_) => "a colour",
-            Value::List(_) => "a list",
+            Value::Bool(_) => ValueKind::Bool,
+            Value::Int(_) => ValueKind::Int,
+            Value::Float(_) => ValueKind::Float,
+            Value::Str(_) | Value::Ref(_) => ValueKind::Str,
+            Value::Port(_) => ValueKind::Port,
+            Value::Duration(..) => ValueKind::Duration,
+            Value::Size(..) => ValueKind::Size,
+            Value::Colour(_) => ValueKind::Colour,
+            Value::List(_) => ValueKind::List,
         }
     }
 
@@ -65,7 +98,8 @@ fn split_unit(raw: &str, units: &[&str]) -> Option<(f64, String)> {
     })
 }
 
-fn parse_string(inner: &str, line: usize) -> Result<Value, String> {
+fn parse_string(inner: &str, line: usize) -> Result<Value, Error> {
+    let string = || inner.to_string();
     let mut parts = Vec::new();
     let mut buf = String::new();
     let mut chars = inner.chars();
@@ -74,7 +108,9 @@ fn parse_string(inner: &str, line: usize) -> Result<Value, String> {
         match c {
             '\\' => match chars.next() {
                 Some(e @ ('"' | '\\' | '{' | '}')) => buf.push(e),
-                _ => return Err(format!("line {}: bad escape in \"{}\"", line, inner)),
+                _ => {
+                    return Err(Error::at(line, ErrorKind::BadEscape { string: string() }));
+                }
             },
             '{' => {
                 let mut path = String::new();
@@ -82,19 +118,37 @@ fn parse_string(inner: &str, line: usize) -> Result<Value, String> {
                     match chars.next() {
                         Some('}') => break,
                         Some(c) => path.push(c),
-                        None => return Err(format!("line {}: unclosed {{ in \"{}\"", line, inner)),
+                        None => {
+                            return Err(Error::at(
+                                line,
+                                ErrorKind::UnclosedReference { string: string() },
+                            ));
+                        }
                     }
                 }
                 if path.is_empty() {
-                    return Err(format!("line {}: empty reference in \"{}\"", line, inner));
+                    return Err(Error::at(
+                        line,
+                        ErrorKind::EmptyReference { string: string() },
+                    ));
                 }
                 if !buf.is_empty() {
                     parts.push(Part::Text(std::mem::take(&mut buf)));
                 }
                 parts.push(Part::Ref(path));
             }
-            '}' => return Err(format!("line {}: unmatched }} in \"{}\"", line, inner)),
-            '"' => return Err(format!("line {}: unescaped quote in \"{}\"", line, inner)),
+            '}' => {
+                return Err(Error::at(
+                    line,
+                    ErrorKind::UnmatchedBrace { string: string() },
+                ));
+            }
+            '"' => {
+                return Err(Error::at(
+                    line,
+                    ErrorKind::UnescapedQuote { string: string() },
+                ));
+            }
             _ => buf.push(c),
         }
     }
@@ -137,9 +191,14 @@ fn split_items(inner: &str) -> Vec<&str> {
     items
 }
 
-fn parse_list(raw: &str, line: usize) -> Result<Value, String> {
+fn parse_list(raw: &str, line: usize) -> Result<Value, Error> {
     let Some(inner) = raw.strip_prefix('[').and_then(|r| r.strip_suffix(']')) else {
-        return Err(format!("line {}: unterminated list: {}", line, raw));
+        return Err(Error::at(
+            line,
+            ErrorKind::UnterminatedList {
+                list: raw.to_string(),
+            },
+        ));
     };
 
     if inner.trim().is_empty() {
@@ -149,10 +208,20 @@ fn parse_list(raw: &str, line: usize) -> Result<Value, String> {
     let mut items = Vec::new();
     for item in split_items(inner) {
         if item.is_empty() {
-            return Err(format!("line {}: empty item in list: {}", line, raw));
+            return Err(Error::at(
+                line,
+                ErrorKind::EmptyListItem {
+                    list: raw.to_string(),
+                },
+            ));
         }
         if item.starts_with('[') {
-            return Err(format!("line {}: lists can't be nested: {}", line, raw));
+            return Err(Error::at(
+                line,
+                ErrorKind::NestedList {
+                    list: Some(raw.to_string()),
+                },
+            ));
         }
         items.push(parse_value(item, line)?);
     }
@@ -160,7 +229,7 @@ fn parse_list(raw: &str, line: usize) -> Result<Value, String> {
     Ok(Value::List(items))
 }
 
-pub(crate) fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
+pub(crate) fn parse_value(raw: &str, line: usize) -> Result<Value, Error> {
     if raw.starts_with('[') {
         return parse_list(raw, line);
     }
@@ -168,13 +237,23 @@ pub(crate) fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
     if let Some(num) = raw.strip_prefix(':') {
         return match num.parse::<u16>() {
             Ok(port) if !num.starts_with('+') => Ok(Value::Port(port)),
-            _ => Err(format!("line {}: invalid port: '{}'", line, num)),
+            _ => Err(Error::at(
+                line,
+                ErrorKind::InvalidPort {
+                    value: num.to_string(),
+                },
+            )),
         };
     }
 
     if let Some(hexpart) = raw.strip_prefix("#") {
         if !matches!(hexpart.len(), 6 | 8) || !hexpart.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err(format!("line {}: invalid colour: '{}'", line, raw));
+            return Err(Error::at(
+                line,
+                ErrorKind::InvalidColour {
+                    value: raw.to_string(),
+                },
+            ));
         }
         return Ok(Value::Colour(hexpart.to_ascii_uppercase()));
     }
@@ -182,7 +261,12 @@ pub(crate) fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
     if let Some(rest) = raw.strip_prefix('"') {
         return match rest.strip_suffix('"') {
             Some(inner) => parse_string(inner, line),
-            None => Err(format!("line {}: unterminated string: {}", line, raw)),
+            None => Err(Error::at(
+                line,
+                ErrorKind::UnterminatedString {
+                    value: raw.to_string(),
+                },
+            )),
         };
     }
 
@@ -192,8 +276,17 @@ pub(crate) fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
         _ => {}
     }
 
+    let unknown = || {
+        Error::at(
+            line,
+            ErrorKind::UnknownValue {
+                value: raw.to_string(),
+            },
+        )
+    };
+
     if raw.starts_with('+') {
-        return Err(format!("line {}: unknown value: '{}'", line, raw));
+        return Err(unknown());
     }
 
     if let Ok(n) = raw.parse::<i64>() {
@@ -204,7 +297,12 @@ pub(crate) fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
         && let Ok(f) = raw.parse::<f64>()
     {
         if f.is_infinite() {
-            return Err(format!("line {}: float is out of range: '{}'", line, raw));
+            return Err(Error::at(
+                line,
+                ErrorKind::FloatOutOfRange {
+                    value: raw.to_string(),
+                },
+            ));
         }
         return Ok(Value::Float(f));
     }
@@ -217,5 +315,5 @@ pub(crate) fn parse_value(raw: &str, line: usize) -> Result<Value, String> {
         return Ok(Value::Size(n, unit));
     }
 
-    Err(format!("line {}: unknown value: '{}'", line, raw))
+    Err(unknown())
 }

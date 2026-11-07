@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use tesserae::{Config, load_str};
+use tesserae::{Config, Error, load_str};
 
 static NEXT: AtomicUsize = AtomicUsize::new(0);
 
@@ -39,16 +39,24 @@ pub fn ok_env(src: &str, env: &str) -> Config {
     load_str(src, Some(env)).unwrap_or_else(|e| panic!("expected {src:?} to load, got: {e}"))
 }
 
-pub fn err(src: &str) -> String {
+pub fn load_err(src: &str) -> Error {
     match load_str(src, None) {
         Ok(_) => panic!("expected {src:?} to fail to load"),
         Err(e) => e,
     }
 }
 
-pub fn err_env(src: &str, env: &str) -> String {
+pub fn load_err_env(src: &str, env: &str) -> Error {
     match load_str(src, Some(env)) {
         Ok(_) => panic!("expected {src:?} to fail to load under {env}"),
         Err(e) => e,
     }
+}
+
+pub fn err(src: &str) -> String {
+    load_err(src).to_string()
+}
+
+pub fn err_env(src: &str, env: &str) -> String {
+    load_err_env(src, env).to_string()
 }

@@ -1,10 +1,11 @@
+use crate::error::{Error, ErrorKind};
 use crate::{Part, Value};
 use std::collections::HashMap;
 use std::mem::discriminant;
 
 type Map = HashMap<String, (Value, usize)>;
 
-pub(crate) fn resolve(map: Map) -> Result<Map, String> {
+pub(crate) fn resolve(map: Map) -> Result<Map, Error> {
     let mut keys: Vec<&String> = map.keys().collect();
     keys.sort();
 
@@ -23,7 +24,7 @@ fn reach<'a>(
     map: &'a Map,
     done: &mut Map,
     stack: &mut Vec<&'a str>,
-) -> Result<Value, String> {
+) -> Result<Value, Error> {
     if let Some((value, _)) = done.get(key) {
         return Ok(value.clone());
     }
@@ -44,7 +45,7 @@ fn settle<'a>(
     map: &'a Map,
     done: &mut Map,
     stack: &mut Vec<&'a str>,
-) -> Result<Value, String> {
+) -> Result<Value, Error> {
     match value {
         Value::Ref(path) => stalk(path, line, map, done, stack),
         Value::Str(parts) => {
@@ -55,9 +56,11 @@ fn settle<'a>(
                     Part::Ref(path) => {
                         let target = stalk(path, line, map, done, stack)?;
                         if matches!(target, Value::List(_)) {
-                            return Err(format!(
-                                "line {}: can't put list '{}' inside a string",
-                                line, path
+                            return Err(Error::at(
+                                line,
+                                ErrorKind::ListInString {
+                                    reference: path.clone(),
+                                },
                             ));
                         }
                         text.push_str(&strify(&target));
@@ -78,17 +81,18 @@ fn settle<'a>(
     }
 }
 
-fn check_items(items: &[Value], line: usize) -> Result<(), String> {
+fn check_items(items: &[Value], line: usize) -> Result<(), Error> {
     for item in items {
         if matches!(item, Value::List(_)) {
-            return Err(format!("line {}: lists can't be nested", line));
+            return Err(Error::at(line, ErrorKind::NestedList { list: None }));
         }
         if discriminant(item) != discriminant(&items[0]) {
-            return Err(format!(
-                "line {}: list mixes {} and {}",
+            return Err(Error::at(
                 line,
-                items[0].kind(),
-                item.kind()
+                ErrorKind::MixedList {
+                    first: items[0].kind(),
+                    other: item.kind(),
+                },
             ));
         }
     }
@@ -101,21 +105,19 @@ fn stalk<'a>(
     map: &'a Map,
     done: &mut Map,
     stack: &mut Vec<&'a str>,
-) -> Result<Value, String> {
+) -> Result<Value, Error> {
     if let Some(start) = stack.iter().position(|k| *k == path) {
-        let mut cycle = stack[start..].to_vec();
-        cycle.push(path);
-        return Err(format!(
-            "line {}: reference cycle: {}",
-            line,
-            cycle.join(" -> ")
-        ));
+        let mut cycle: Vec<String> = stack[start..].iter().map(|k| k.to_string()).collect();
+        cycle.push(path.to_string());
+        return Err(Error::at(line, ErrorKind::ReferenceCycle { cycle }));
     }
 
     if !map.contains_key(path) {
-        return Err(format!(
-            "line {}: reference to '{}', which doesn't exist",
-            line, path
+        return Err(Error::at(
+            line,
+            ErrorKind::UnknownReference {
+                reference: path.to_string(),
+            },
         ));
     }
 

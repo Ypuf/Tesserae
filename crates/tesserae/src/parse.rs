@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
+use crate::error::{Error, ErrorKind};
 use crate::value::parse_value;
 
 #[derive(Debug, Clone)]
@@ -50,14 +51,13 @@ fn valid_path(s: &str) -> bool {
     s.split('/').all(valid_name)
 }
 
-pub(crate) fn parse(path: &Path) -> Result<Parsed, String> {
-    let contents =
-        fs::read_to_string(path).map_err(|e| format!("couldn't read {}: {}", path.display(), e))?;
+pub(crate) fn parse(path: &Path) -> Result<Parsed, Error> {
+    let contents = fs::read_to_string(path).map_err(Error::read)?;
 
     parse_str(&contents)
 }
 
-pub(crate) fn parse_str(contents: &str) -> Result<Parsed, String> {
+pub(crate) fn parse_str(contents: &str) -> Result<Parsed, Error> {
     let mut tess: Option<String> = None;
     let mut scope: Vec<String> = Vec::new();
     let mut entries = Vec::new();
@@ -77,41 +77,83 @@ pub(crate) fn parse_str(contents: &str) -> Result<Parsed, String> {
                 None
             } else {
                 if !valid_name(name) {
-                    return Err(format!("line {}: tessera name is invalid: '{}'", line, ln));
+                    return Err(Error::at(
+                        line,
+                        ErrorKind::InvalidTesseraName {
+                            text: ln.to_string(),
+                        },
+                    ));
                 }
                 tesserae.insert(name.to_string());
                 Some(name.to_string())
             };
             scope.clear();
-        } else if let Some(rest) = ln.strip_prefix("::") {
-            let rest = rest.trim();
-            scope = if rest.is_empty() {
-                Vec::new()
-            } else {
-                if !valid_path(rest) {
-                    return Err(format!("line {}: path name is invalid: '{}'", line, ln));
-                }
-                rest.split('/').map(String::from).collect()
-            };
-        } else if let Some((key, raw)) = ln.split_once('=') {
-            if key.trim().is_empty() {
-                return Err(format!("line {}: key can't be empty: '{}'", line, ln));
-            }
-            if !valid_path(key.trim()) {
-                return Err(format!("line {}: key name is invalid: '{}'", line, ln));
-            }
-            let mut parts = scope.clone();
-            parts.extend(key.trim().split('/').map(String::from));
-            entries.push(Entry {
-                tess: tess.clone(),
-                key: parts.join("/"),
-                value: parse_value(raw.trim(), line)?,
-                line,
-            });
         } else {
-            return Err(format!("line {}: can't parse {:?}", line, ln));
+            parse_line(ln, line, &tess, &mut scope, &mut entries).map_err(|e| match &tess {
+                Some(name) => e.in_tessera(name),
+                None => e,
+            })?;
         }
     }
 
     Ok(Parsed { entries, tesserae })
+}
+
+fn parse_line(
+    ln: &str,
+    line: usize,
+    tess: &Option<String>,
+    scope: &mut Vec<String>,
+    entries: &mut Vec<Entry>,
+) -> Result<(), Error> {
+    if let Some(rest) = ln.strip_prefix("::") {
+        let rest = rest.trim();
+        *scope = if rest.is_empty() {
+            Vec::new()
+        } else {
+            if !valid_path(rest) {
+                return Err(Error::at(
+                    line,
+                    ErrorKind::InvalidPath {
+                        text: ln.to_string(),
+                    },
+                ));
+            }
+            rest.split('/').map(String::from).collect()
+        };
+    } else if let Some((key, raw)) = ln.split_once('=') {
+        if key.trim().is_empty() {
+            return Err(Error::at(
+                line,
+                ErrorKind::EmptyKey {
+                    text: ln.to_string(),
+                },
+            ));
+        }
+        if !valid_path(key.trim()) {
+            return Err(Error::at(
+                line,
+                ErrorKind::InvalidKey {
+                    text: ln.to_string(),
+                },
+            ));
+        }
+        let mut parts = scope.clone();
+        parts.extend(key.trim().split('/').map(String::from));
+        entries.push(Entry {
+            tess: tess.clone(),
+            key: parts.join("/"),
+            value: parse_value(raw.trim(), line)?,
+            line,
+        });
+    } else {
+        return Err(Error::at(
+            line,
+            ErrorKind::InvalidLine {
+                text: ln.to_string(),
+            },
+        ));
+    }
+
+    Ok(())
 }

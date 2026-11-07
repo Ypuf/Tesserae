@@ -47,7 +47,10 @@ fn load_errors_go_to_stderr_with_exit_code_one() {
 
     assert_eq!(out.status.code(), Some(1));
     assert_eq!(stdout(&out), "");
-    assert_eq!(stderr(&out), "line 1: unknown value: 'nope'\n");
+    assert_eq!(
+        stderr(&out),
+        format!("{}: line 1: unknown value: 'nope'\n", file.path().display())
+    );
 }
 
 #[test]
@@ -66,22 +69,22 @@ fn prints_converted_values() {
 }
 
 #[test]
-fn unconvertible_values_fail_without_partial_output() {
-    let file = TempFile::new("a = 1\nb = 0.5B\n");
-    let out = run(&[file.path().to_str().unwrap()]);
+fn read_errors_print_the_io_error_once() {
+    let out = run(&["/definitely/not/here.tess"]);
+    let err = stderr(&out);
 
     assert_eq!(out.status.code(), Some(1));
-    assert_eq!(stdout(&out), "");
-    assert_eq!(
-        stderr(&out),
-        "line 2: 'b' isn't a whole number of bytes that fits in u64\n"
+    assert!(
+        err.starts_with("/definitely/not/here.tess: couldn't read file: "),
+        "{err}"
     );
+    assert_eq!(err.matches("os error").count(), 1, "{err}");
 }
 
 #[test]
 fn missing_path_argument_fails_with_usage() {
     let out = run(&[]);
 
-    assert!(!out.status.success());
-    assert!(stderr(&out).contains("usage: <path> [env]"));
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(stderr(&out), "usage: <path> [env]\n");
 }

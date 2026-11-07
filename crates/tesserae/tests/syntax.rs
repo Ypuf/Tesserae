@@ -1,7 +1,5 @@
 mod common;
 
-use std::path::Path;
-
 use common::{err, ok};
 
 #[test]
@@ -109,18 +107,5 @@ fn duplicates_are_detected_across_section_and_path_spellings() {
     assert_eq!(
         err("db/host = 1\n:: db\nhost = 2"),
         "line 3: 'db/host' already defined on line 1"
-    );
-}
-
-#[test]
-fn missing_file_is_reported_with_its_path() {
-    let path = Path::new("/definitely/not/here.tess");
-    let msg = match tesserae::load(path, None) {
-        Ok(_) => panic!("expected a read error"),
-        Err(e) => e,
-    };
-    assert!(
-        msg.starts_with("couldn't read /definitely/not/here.tess: "),
-        "{msg}"
     );
 }

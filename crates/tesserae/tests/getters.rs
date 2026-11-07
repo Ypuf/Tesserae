@@ -47,10 +47,13 @@ fn keys_are_sorted() {
 }
 
 #[test]
-fn get_and_line_reject_missing_keys() {
-    let missing = "no key 'b' in config".to_string();
-    assert_eq!(ok("a = 1").get("b"), Err(missing.clone()));
-    assert_eq!(ok("a = 1").line("b"), Err(missing));
+fn getters_reject_missing_keys() {
+    let config = ok("a = 1");
+    let missing = "no key 'b' in config";
+    assert_eq!(config.get("b").unwrap_err().to_string(), missing);
+    assert_eq!(config.line("b").unwrap_err().to_string(), missing);
+    assert_eq!(config.int("b").unwrap_err().to_string(), missing);
+    assert_eq!(config.ints("b").unwrap_err().to_string(), missing);
 }
 
 #[test]
@@ -134,14 +137,6 @@ fn sizes_must_fit_in_u64() {
 }
 
 #[test]
-fn missing_key_is_an_error() {
-    assert_eq!(
-        ok("a = 1").int("b"),
-        Err("no key 'b' in config".to_string())
-    );
-}
-
-#[test]
 fn every_getter_rejects_every_other_type() {
     let config = ok(r#"
         bool = true
@@ -165,7 +160,7 @@ fn every_getter_rejects_every_other_type() {
         ("colour", "a colour", 9),
     ];
 
-    type Getter = fn(&Config, &str) -> Result<(), String>;
+    type Getter = fn(&Config, &str) -> Result<(), tesserae::Error>;
     let getters: [(&str, Getter); 8] = [
         ("a bool", |c, k| c.bool(k).map(drop)),
         ("an int", |c, k| c.int(k).map(drop)),
@@ -184,7 +179,11 @@ fn every_getter_rejects_every_other_type() {
             } else {
                 Err(format!("line {line}: '{key}' is {kind}, not {want}"))
             };
-            assert_eq!(get(&config, key), expected, "{want} getter on {key}");
+            assert_eq!(
+                get(&config, key).map_err(|e| e.to_string()),
+                expected,
+                "{want} getter on {key}"
+            );
         }
     }
 }

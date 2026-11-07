@@ -143,20 +143,16 @@ fn reference_errors_inside_lists_are_reported() {
 fn getters_check_lists_and_items() {
     let config = ok("\nnum = 1\nlist = [1, 2]\nmix = [\"a\"]");
     assert_eq!(
-        config.ints("num"),
-        Err("line 2: 'num' is an int, not a list".to_string())
+        config.ints("num").unwrap_err().to_string(),
+        "line 2: 'num' is an int, not a list"
     );
     assert_eq!(
-        config.int("list"),
-        Err("line 3: 'list' is a list, not an int".to_string())
+        config.int("list").unwrap_err().to_string(),
+        "line 3: 'list' is a list, not an int"
     );
     assert_eq!(
-        config.ints("mix"),
-        Err("line 4: 'mix[0]' is a string, not an int".to_string())
-    );
-    assert_eq!(
-        config.ints("missing"),
-        Err("no key 'missing' in config".to_string())
+        config.ints("mix").unwrap_err().to_string(),
+        "line 4: 'mix[0]' is a string, not an int"
     );
 }
 

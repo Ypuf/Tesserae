@@ -1,5 +1,6 @@
 use crate::Parsed;
 use crate::Value;
+use crate::error::{Error, ErrorKind};
 use std::collections::HashMap;
 use std::mem::discriminant;
 use strsim::damerau_levenshtein;
@@ -7,7 +8,7 @@ use strsim::damerau_levenshtein;
 pub(crate) fn apply(
     parsed: Parsed,
     env: Option<&str>,
-) -> Result<HashMap<String, (Value, usize)>, String> {
+) -> Result<HashMap<String, (Value, usize)>, Error> {
     let Parsed { entries, tesserae } = parsed;
     let mut map = HashMap::new();
 
@@ -18,19 +19,23 @@ pub(crate) fn apply(
             .iter()
             .map(|t| (damerau_levenshtein(env, t), t.as_str()))
             .filter(|(d, _)| *d <= 2)
-            .min_by_key(|(d, t)| (*d, *t));
+            .min_by_key(|(d, t)| (*d, *t))
+            .map(|(_, t)| t.to_string());
 
-        return Err(match suggestion {
-            Some((_, t)) => format!("no tessera matching '{}'. did you mean '{}'?", env, t),
-            None => format!("no tessera matching '{}'.", env),
-        });
+        return Err(Error::new(ErrorKind::UnknownTessera {
+            name: env.to_string(),
+            suggestion,
+        }));
     }
 
     for e in entries.iter().filter(|e| e.tess.is_none()) {
         if let Some((_, prev)) = map.get(&e.key) {
-            return Err(format!(
-                "line {}: '{}' already defined on line {}",
-                e.line, e.key, prev
+            return Err(Error::at(
+                e.line,
+                ErrorKind::DuplicateKey {
+                    key: e.key.clone(),
+                    first_line: *prev,
+                },
             ));
         }
         map.insert(e.key.clone(), (e.value.clone(), e.line));
@@ -41,25 +46,36 @@ pub(crate) fn apply(
 
         for e in entries.iter().filter(|e| e.tess.as_deref() == Some(env)) {
             if let Some(prev) = seen.insert(e.key.as_str(), e.line) {
-                return Err(format!(
-                    "line {}: '{}' already set in @{} on line {}",
-                    e.line, e.key, env, prev
+                return Err(Error::at(
+                    e.line,
+                    ErrorKind::DuplicateOverride {
+                        tessera: env.to_string(),
+                        key: e.key.clone(),
+                        first_line: prev,
+                    },
                 ));
             }
 
             let Some((base_value, base_line)) = map.get(&e.key) else {
-                return Err(format!(
-                    "line {}: @{} overrides '{}', which isn't in base",
-                    e.line, env, e.key
+                return Err(Error::at(
+                    e.line,
+                    ErrorKind::OverrideNotInBase {
+                        tessera: env.to_string(),
+                        key: e.key.clone(),
+                    },
                 ));
             };
 
             let either_ref =
                 matches!(base_value, Value::Ref(_)) || matches!(e.value, Value::Ref(_));
             if !either_ref && discriminant(base_value) != discriminant(&e.value) {
-                return Err(format!(
-                    "line {}: @{} sets '{}' to a different type than base (line {})",
-                    e.line, env, e.key, base_line
+                return Err(Error::at(
+                    e.line,
+                    ErrorKind::OverrideTypeMismatch {
+                        tessera: env.to_string(),
+                        key: e.key.clone(),
+                        base_line: *base_line,
+                    },
                 ));
             }
 
