@@ -1,0 +1,15 @@
+[package]
+name = "tesserae-py"
+version = "0.1.0"
+publish = false
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[lib]
+name = "tesserae"
+crate-type = ["cdylib"]
+
+[dependencies]
+tess = { package = "tesserae-config", path = "../tesserae" }
+pyo3 = { version = "0.29.0", features = ["abi3-py39"] }
