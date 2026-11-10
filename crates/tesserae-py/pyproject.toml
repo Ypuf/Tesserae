@@ -4,6 +4,10 @@ build-backend = "maturin"
 
 [project]
 name = "tesserae-config"
+description = "a small typed config format"
+readme = "../../README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Rust",
