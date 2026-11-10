@@ -28,7 +28,10 @@ mod tesserae {
             Size(n) => n.into_pyobject(py)?.into_any().unbind(),
             Duration(d) => d.into_pyobject(py)?.into_any().unbind(), // -> timedelta
             List(items) => {
-                let items = items.into_iter().map(|i| to_py(py, i)).collect::<PyResult<Vec<_>>>()?;
+                let items = items
+                    .into_iter()
+                    .map(|i| to_py(py, i))
+                    .collect::<PyResult<Vec<_>>>()?;
                 PyList::new(py, items)?.into_any().unbind()
             }
             _ => unreachable!("Resolved is non_exhaustive; handle new variants here"),

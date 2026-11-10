@@ -8,8 +8,8 @@ import tesserae
 file = str(Path(__file__).resolve().parents[2] / "tesserae" / "file" / "example.tess")
 
 # tesserae.load loads the file from a path string or path with any environment
-# tesserae.load("example.tess")
-# tesserae.load("example.tess", "prod")
+# tesserae.load("example.tess")            loads with base variables
+# tesserae.load("example.tess", "prod")    loads with @prod variables
 config = tesserae.load(file, os.environ.get("TESSERAE") or "prod")
 
 print(f"serving {config['url']} on port {config['port']}")
