@@ -178,6 +178,15 @@ pub enum ErrorKind {
         key: String,
         first_line: usize,
     },
+    ValueAndSection {
+        key: String,
+        value_line: usize,
+        child: String,
+        child_line: usize,
+    },
+    KeyAndTessera {
+        key: String,
+    },
     DuplicateOverride {
         tessera: String,
         key: String,
@@ -274,6 +283,19 @@ impl fmt::Display for ErrorKind {
             } => write!(f, "no tessera matching '{}'.", name),
             ErrorKind::DuplicateKey { key, first_line } => {
                 write!(f, "'{}' already defined on line {}", key, first_line)
+            }
+            ErrorKind::ValueAndSection {
+                key,
+                value_line,
+                child,
+                child_line,
+            } => write!(
+                f,
+                "'{}' is both a value (line {}) and a section ('{}' on line {})",
+                key, value_line, child, child_line
+            ),
+            ErrorKind::KeyAndTessera { key } => {
+                write!(f, "'{}' is both a key and a tessera (@{})", key, key)
             }
             ErrorKind::DuplicateOverride {
                 tessera,

@@ -4,7 +4,7 @@ use std::error::Error as _;
 use std::io;
 use std::path::Path;
 
-use common::{TempFile, load_err, load_err_env, ok};
+use common::{TempFile, load_err, load_err_env, ok, ok_env};
 use tesserae::{Error, ErrorKind, ValueKind, load};
 
 macro_rules! assert_kind {
@@ -118,6 +118,55 @@ fn duplicate_keys() {
         ErrorKind::DuplicateOverride { tessera, key, first_line: 3 }
             if tessera == "prod" && key == "a"
     );
+}
+
+#[test]
+fn a_key_cant_also_be_a_section() {
+    let err = load_err("db = 1\ndb/host = \"x\"");
+    assert_kind!(
+        &err,
+        Some(2),
+        ErrorKind::ValueAndSection { key, value_line: 1, child, child_line: 2 }
+            if key == "db" && child == "db/host"
+    );
+    assert_eq!(
+        err.to_string(),
+        "line 2: 'db' is both a value (line 1) and a section ('db/host' on line 2)"
+    );
+
+    assert_kind!(
+        load_err(":: db\nhost = \"x\"\n::\ndb = 1"),
+        Some(4),
+        ErrorKind::ValueAndSection { key, value_line: 4, child, child_line: 2 }
+            if key == "db" && child == "db/host"
+    );
+    assert_kind!(
+        load_err("a/b = 1\na/b/c/d = 2"),
+        Some(2),
+        ErrorKind::ValueAndSection { key, child, .. } if key == "a/b" && child == "a/b/c/d"
+    );
+}
+
+#[test]
+fn a_root_key_cant_share_a_tesseras_name() {
+    let src = "prod = 1\n@prod";
+    let err = load_err(src);
+    assert_kind!(&err, Some(1), ErrorKind::KeyAndTessera { key } if key == "prod");
+    assert_eq!(
+        err.to_string(),
+        "line 1: 'prod' is both a key and a tessera (@prod)"
+    );
+    assert_eq!(load_err_env(src, "prod"), err);
+}
+
+#[test]
+fn sections_and_nested_keys_can_share_a_tesseras_name() {
+    let config = ok_env(
+        ":: prod\nhost = \"a\"\n::\nx/prod = 1\n@prod\nprod/host = \"b\"",
+        "prod",
+    );
+    assert_eq!(config.str("prod/host").unwrap(), "b");
+    assert_eq!(config.int("x/prod").unwrap(), 1);
 }
 
 #[test]

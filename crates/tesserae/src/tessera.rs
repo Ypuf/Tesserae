@@ -1,7 +1,7 @@
 use crate::Parsed;
 use crate::Value;
 use crate::error::{Error, ErrorKind};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::mem::discriminant;
 use strsim::damerau_levenshtein;
 
@@ -40,6 +40,8 @@ pub(crate) fn apply(
         }
         map.insert(e.key.clone(), (e.value.clone(), e.line));
     }
+
+    check_names(&map, &tesserae)?;
 
     if let Some(env) = env {
         let mut seen: HashMap<&str, usize> = HashMap::new();
@@ -84,4 +86,41 @@ pub(crate) fn apply(
     }
 
     Ok(map)
+}
+
+fn check_names(
+    map: &HashMap<String, (Value, usize)>,
+    tesserae: &HashSet<String>,
+) -> Result<(), Error> {
+    let mut keys: Vec<&String> = map.keys().collect();
+    keys.sort();
+
+    for child in &keys {
+        let child_line = map[*child].1;
+        for (i, _) in child.match_indices('/') {
+            let key = &child[..i];
+            if let Some((_, value_line)) = map.get(key) {
+                return Err(Error::at(
+                    child_line.max(*value_line),
+                    ErrorKind::ValueAndSection {
+                        key: key.to_string(),
+                        value_line: *value_line,
+                        child: child.to_string(),
+                        child_line,
+                    },
+                ));
+            }
+        }
+    }
+
+    for key in keys {
+        if !key.contains('/') && tesserae.contains(key) {
+            return Err(Error::at(
+                map[key].1,
+                ErrorKind::KeyAndTessera { key: key.clone() },
+            ));
+        }
+    }
+
+    Ok(())
 }

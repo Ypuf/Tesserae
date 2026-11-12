@@ -43,7 +43,7 @@ fn get_returns_every_type_converted() {
 
 #[test]
 fn keys_are_sorted() {
-    assert_eq!(ok("b = 1\na/c = 2\na = 3\n").keys(), ["a", "a/c", "b"]);
+    assert_eq!(ok("b = 1\nab = 2\na/c = 3\n").keys(), ["a/c", "ab", "b"]);
 }
 
 #[test]
